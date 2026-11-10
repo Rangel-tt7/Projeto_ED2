@@ -12,13 +12,13 @@ type Hospital struct {
 }
 
 type Chamado struct {
-	ID, X, Y, Valor, Prazo int
-	Aberto                 bool
+	ID, X, Y, Valor, Prazo, DistanciaHospital, Reserva int
+	Aberto                                             bool
 }
 
 type Ambulancia struct {
-	ID, X, Y int
-	Livre    bool
+	ID, X, Y, Alvo int
+	Livre          bool
 }
 
 var leitor *bufio.Scanner  //Variável global, aponta para o scanner de entrada
@@ -74,13 +74,13 @@ func lerInicio() {
 		id := lerNumero()
 		x := lerNumero()
 		y := lerNumero()
-		ambulancias[id] = Ambulancia{id, x, y, true}
+		ambulancias[id] = Ambulancia{id, x, y, -1, true}
 	}
 
 	lerPalavra() // BLOQUEIOS
 	qtdBloqueios := lerNumero()
 	for i := 0; i < qtdBloqueios*4; i++ {
-		lerNumero() // x1 y1 alvoX alvoY (só na etapa 2)
+		lerNumero()
 	}
 
 	lerPalavra()                                            // FIM
@@ -96,7 +96,7 @@ func lerTurno() bool {
 	}
 	turnoAtual = lerNumero()
 
-	for _, id := range expira[turnoAtual-1] { //percorre o slice e entrega a posição e o item, descarta a posição
+	for _, id := range expira[turnoAtual-1] { //fecha os chamados dos turnos que expiraram no turno anterior
 		fechar(id) //fecha o chamado
 	}
 	expira[turnoAtual-1] = nil
@@ -110,10 +110,12 @@ func lerTurno() bool {
 		y := lerNumero()
 		valor := lerNumero()
 		prazo := lerNumero()
-		posicao := len(chamados)                                           //posição do chamado no slice
-		chamados = append(chamados, Chamado{id, x, y, valor, prazo, true}) //adiciona o chamado ao slice
-		porID.Inserir(id, posicao)                                         // guarda na hash
-		expira[prazo] = append(expira[prazo], id)                          // anota o id na página do prazo
+		posicao := len(chamados)
+		hospitalX, hospitalY := hospitalMaisProximo(x, y)
+		distHospital := manhattan(x, y, hospitalX, hospitalY)
+		chamados = append(chamados, Chamado{id, x, y, valor, prazo, distHospital, -1, true}) //adiciona o chamado ao slice
+		porID.Inserir(id, posicao)                                                           // guarda na hash
+		expira[prazo] = append(expira[prazo], id)                                            // anota o id na página do prazo
 	}
 
 	lerPalavra() // RECOLHIDOS
