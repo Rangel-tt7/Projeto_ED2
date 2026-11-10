@@ -24,6 +24,7 @@ var hospitais []Hospital
 var turnoAtual int
 var chamados []Chamado //todos os chamados, na ordem em que chegaram
 var porID *TabelaHash  //para achar o índice de um chamado pelo ID
+var expira [][]int     //uma lista de páginas, cada uma com os IDs dos chamados que expiram naquele turno
 
 // lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
 func lerPalavra() []byte {
@@ -75,7 +76,7 @@ func lerInicio() {
 	lerPalavra()                                            // FIM
 	porID = CriarTabela(proximoPrimo(largura * altura / 2)) //tamanho inicial da tabela hash
 	chamados = make([]Chamado, 0, largura*altura/4)         //capacidade inicial do slice, make([]Tipo, tamanho, capacidade)
-
+	expira = make([][]int, totalTurnos+2000)                //uma página para cada turno
 }
 
 // lerTurno lê a mensagem de um turno. Devolve false quando a partida acaba
@@ -84,6 +85,11 @@ func lerTurno() bool {
 		return false
 	}
 	turnoAtual = lerNumero()
+
+	for _, id := range expira[turnoAtual-1] { //percorre o slice e entrega a posição e o item, descarta a posição
+		fechar(id) //fecha o chamado
+	}
+	expira[turnoAtual-1] = nil
 
 	lerPalavra() // CHAMADOS
 	qtdChamados := lerNumero()
@@ -96,7 +102,8 @@ func lerTurno() bool {
 		prazo := lerNumero()
 		posicao := len(chamados)                                           //posição do chamado no slice
 		chamados = append(chamados, Chamado{id, x, y, valor, prazo, true}) //adiciona o chamado ao slice
-		porID.Inserir(id, posicao)                                         //insere o id e a posição do chamado no slice
+		porID.Inserir(id, posicao)                                         // guarda na hash: id -> posição no slice
+		expira[prazo] = append(expira[prazo], id)                          // anota o id na página do prazo
 	}
 
 	lerPalavra() // RECOLHIDOS
