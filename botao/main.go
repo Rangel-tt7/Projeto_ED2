@@ -16,15 +16,21 @@ type Chamado struct {
 	Aberto                 bool
 }
 
+type Ambulancia struct {
+	ID, X, Y int
+	Livre    bool
+}
+
 var leitor *bufio.Scanner  //Variável global, aponta para o scanner de entrada
 var escritor *bufio.Writer //Escritor da saída, envia no Flush
 
 var largura, altura, totalTurnos int
 var hospitais []Hospital
 var turnoAtual int
-var chamados []Chamado //todos os chamados, na ordem em que chegaram
-var porID *TabelaHash  //para achar o índice de um chamado pelo ID
-var expira [][]int     //uma lista de páginas, cada uma com os IDs dos chamados que expiram naquele turno
+var chamados []Chamado       //todos os chamados, na ordem em que chegaram
+var ambulancias []Ambulancia //todas as ambulâncias, aplica a regra do 0 até k-1
+var porID *TabelaHash        //para achar o índice de um chamado pelo ID
+var expira [][]int           //uma lista de páginas, cada uma com os IDs dos chamados que expiram naquele turno
 
 // lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
 func lerPalavra() []byte {
@@ -63,14 +69,18 @@ func lerInicio() {
 
 	lerPalavra() // AMBULANCIAS
 	qtdAmbulancias := lerNumero()
-	for i := 0; i < qtdAmbulancias*3; i++ {
-		lerNumero() // id x y (não usados ainda)
+	ambulancias = make([]Ambulancia, qtdAmbulancias)
+	for i := 0; i < qtdAmbulancias; i++ {
+		id := lerNumero()
+		x := lerNumero()
+		y := lerNumero()
+		ambulancias[id] = Ambulancia{id, x, y, true}
 	}
 
 	lerPalavra() // BLOQUEIOS
 	qtdBloqueios := lerNumero()
 	for i := 0; i < qtdBloqueios*4; i++ {
-		lerNumero() // x1 y1 x2 y2 (só na etapa 2)
+		lerNumero() // x1 y1 alvoX alvoY (só na etapa 2)
 	}
 
 	lerPalavra()                                            // FIM
@@ -102,7 +112,7 @@ func lerTurno() bool {
 		prazo := lerNumero()
 		posicao := len(chamados)                                           //posição do chamado no slice
 		chamados = append(chamados, Chamado{id, x, y, valor, prazo, true}) //adiciona o chamado ao slice
-		porID.Inserir(id, posicao)                                         // guarda na hash: id -> posição no slice
+		porID.Inserir(id, posicao)                                         // guarda na hash
 		expira[prazo] = append(expira[prazo], id)                          // anota o id na página do prazo
 	}
 
@@ -116,10 +126,17 @@ func lerTurno() bool {
 	lerPalavra() // AMBULANCIAS
 	qtdAmbulancias := lerNumero()
 	for i := 0; i < qtdAmbulancias; i++ {
-		lerNumero()  // id
-		lerNumero()  // x
-		lerNumero()  // y
-		lerPalavra() // LIVRE ou OCUPADA
+		ambulanciaID := lerNumero() // id
+		x := lerNumero()            // x
+		y := lerNumero()            // y
+		estado := lerPalavra()      // LIVRE ou OCUPADA
+		if string(estado) == "LIVRE" {
+			ambulancias[ambulanciaID].Livre = true
+		} else {
+			ambulancias[ambulanciaID].Livre = false
+		}
+		ambulancias[ambulanciaID].X = x
+		ambulancias[ambulanciaID].Y = y
 	}
 
 	lerPalavra() // PLACAR
@@ -132,6 +149,44 @@ func lerTurno() bool {
 	return true
 }
 
+func direcao(x1, y1, alvoX, alvoY int) string { //Função que indica a direção que a ambulância tem que seguir
+	if x1 < alvoX {
+		return "L"
+	} else if x1 > alvoX {
+		return "O"
+	} else if y1 < alvoY {
+		return "S"
+	} else if y1 > alvoY {
+		return "N"
+	}
+	return "P"
+}
+
+func abs(x int) int { //Função que devolve o valor absoluto de um número
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func manhattan(x1, y1, x2, y2 int) int { //Função calcula a distância entre dois pontos
+	return abs(x1-x2) + abs(y1-y2)
+}
+
+func hospitalMaisProximo(x, y int) (int, int) { //Encontra o hospital mais próximo de um ponto
+	menorDistancia := largura + altura
+	var hospitalX, hospitalY int
+	for _, hospital := range hospitais {
+		distancia := manhattan(x, y, hospital.X, hospital.Y)
+		if distancia < menorDistancia {
+			menorDistancia = distancia
+			hospitalX = hospital.X
+			hospitalY = hospital.Y
+		}
+	}
+	return hospitalX, hospitalY
+}
+
 func fechar(id int) {
 	busca, achou := porID.Buscar(id) //retorna o índice do chamado no slice e se achou
 	if !achou {
@@ -139,6 +194,19 @@ func fechar(id int) {
 	}
 	chamados[busca].Aberto = false //muda o chamado para fechado
 	porID.Remover(id)
+}
+
+func jogar() {
+	for _, ambulancia := range ambulancias { //percorre o slice, entrega posição e item
+		movimento := "P"       // ambulância não se mexe
+		if !ambulancia.Livre { //ambulância ocupada procura hospital mais próximo
+			hospitalX, hospitalY := hospitalMaisProximo(ambulancia.X, ambulancia.Y)
+			movimento = direcao(ambulancia.X, ambulancia.Y, hospitalX, hospitalY)
+		}
+		fmt.Fprintf(escritor, "%d %s\n", ambulancia.ID, movimento)
+	}
+	escritor.WriteString("FIM\n")
+	escritor.Flush()
 }
 
 func main() {
@@ -154,8 +222,7 @@ func main() {
 	escritor.Flush()
 
 	for lerTurno() {
-		escritor.WriteString("FIM\n") // nenhuma ambulância se mexe ainda
-		escritor.Flush()
+		jogar()
 		if turnoAtual%100 == 0 {
 			fmt.Fprintln(depuracao, "turno", turnoAtual, "abertos", porID.quantidade)
 		}
