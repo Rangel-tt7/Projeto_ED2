@@ -11,114 +11,114 @@ type Hospital struct {
 	X, Y int
 }
 
-var entrada *bufio.Scanner //Variável global, aponta para o scanner de entrada
-var saida *bufio.Writer    //Escritor da saída, envia no Flush
+var leitor *bufio.Scanner  //Variável global, aponta para o scanner de entrada
+var escritor *bufio.Writer //Escritor da saída, envia no Flush
 
-var largura, altura, turnos int
+var largura, altura, totalTurnos int
 var hospitais []Hospital
-var turno int // turno atual
+var turnoAtual int
 
-// palavra lê o próximo campo da entrada. Devolve nil quando a entrada acaba
-func palavra() []byte {
-	if !entrada.Scan() { //Avança para o próximo pedaço de texto
+// lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
+func lerPalavra() []byte {
+	if !leitor.Scan() { //Avança para o próximo pedaço de texto
 		return nil
 	}
-	return entrada.Bytes() //Retorna o pedaço de texto lido
+	return leitor.Bytes() //Retorna o pedaço de texto lido
 }
 
-// inteiro lê o próximo field e converte para número
-func inteiro() int {
-	v := 0
-	for _, c := range palavra() { //percorre o slice e entrega a posição e o item, descarta a posição
-		v = v*10 + int(c-'0') // c-'0' converte o caractere no dígito (ex.: '7'-'0' = 7); v*10 desloca os dígitos já lidos uma casa para a esquerda
+// lerNumero lê a próxima palavra e converte para número
+func lerNumero() int {
+	numero := 0
+	for _, letra := range lerPalavra() { //percorre o slice e entrega a posição e o item, descarta a posição
+		numero = numero*10 + int(letra-'0') // letra-'0' converte o caractere no dígito (ex.: '7'-'0' = 7); numero*10 desloca os dígitos já lidos uma casa para a esquerda
 	}
-	return v
+	return numero
 }
 
 // lerInicio lê a mensagem de início e guarda o mapa, os turnos e os hospitais
 func lerInicio() {
-	palavra() // INICIO
-	largura = inteiro()
-	altura = inteiro()
-	turnos = inteiro()
+	lerPalavra() // INICIO
+	largura = lerNumero()
+	altura = lerNumero()
+	totalTurnos = lerNumero()
 	for i := 0; i < 4; i++ {
-		inteiro() // limites, equipe e número de equipes (não usados)
+		lerNumero() // limites, equipe e número de equipes (não usados)
 	}
 
-	palavra() // HOSPITAIS
-	h := inteiro()
-	for i := 0; i < h; i++ {
-		x := inteiro()
-		y := inteiro()
+	lerPalavra() // HOSPITAIS
+	qtdHospitais := lerNumero()
+	for i := 0; i < qtdHospitais; i++ {
+		x := lerNumero()
+		y := lerNumero()
 		hospitais = append(hospitais, Hospital{x, y})
 	}
 
-	palavra() // AMBULANCIAS
-	k := inteiro()
-	for i := 0; i < k*3; i++ {
-		inteiro() // id x y (não usados ainda)
+	lerPalavra() // AMBULANCIAS
+	qtdAmbulancias := lerNumero()
+	for i := 0; i < qtdAmbulancias*3; i++ {
+		lerNumero() // id x y (não usados ainda)
 	}
 
-	palavra() // BLOQUEIOS
-	b := inteiro()
-	for i := 0; i < b*4; i++ {
-		inteiro() // x1 y1 x2 y2 (só na etapa 2)
+	lerPalavra() // BLOQUEIOS
+	qtdBloqueios := lerNumero()
+	for i := 0; i < qtdBloqueios*4; i++ {
+		lerNumero() // x1 y1 x2 y2 (só na etapa 2)
 	}
 
-	palavra() // FIM
+	lerPalavra() // FIM
 }
 
 // lerTurno lê a mensagem de um turno. Devolve false quando a partida acaba
 func lerTurno() bool {
-	if palavra() == nil { // TURNO, ou nil se o servidor fechou a entrada
+	if lerPalavra() == nil { // TURNO, ou nil se o servidor fechou a entrada
 		return false
 	}
-	turno = inteiro()
+	turnoAtual = lerNumero()
 
-	palavra() // CHAMADOS
-	n := inteiro()
-	for i := 0; i < n*5; i++ {
-		inteiro() // id x y valor prazo (guardados no passo 2)
+	lerPalavra() // CHAMADOS
+	qtdChamados := lerNumero()
+	for i := 0; i < qtdChamados*5; i++ {
+		lerNumero() // id x y valor prazo (guardados no passo 2)
 	}
 
-	palavra() // RECOLHIDOS
-	r := inteiro()
-	for i := 0; i < r; i++ {
-		inteiro() // id
+	lerPalavra() // RECOLHIDOS
+	qtdRecolhidos := lerNumero()
+	for i := 0; i < qtdRecolhidos; i++ {
+		lerNumero() // id
 	}
 
-	palavra() // AMBULANCIAS
-	k := inteiro()
-	for i := 0; i < k; i++ {
-		inteiro() // id
-		inteiro() // x
-		inteiro() // y
-		palavra() // LIVRE ou OCUPADA
+	lerPalavra() // AMBULANCIAS
+	qtdAmbulancias := lerNumero()
+	for i := 0; i < qtdAmbulancias; i++ {
+		lerNumero()  // id
+		lerNumero()  // x
+		lerNumero()  // y
+		lerPalavra() // LIVRE ou OCUPADA
 	}
 
-	palavra() // PLACAR
-	e := inteiro()
-	for i := 0; i < e*2; i++ {
-		inteiro() // equipe e pontos
+	lerPalavra() // PLACAR
+	qtdEquipes := lerNumero()
+	for i := 0; i < qtdEquipes*2; i++ {
+		lerNumero() // equipe e pontos
 	}
 
-	palavra() // FIM
+	lerPalavra() // FIM
 	return true
 }
 
 func main() {
-	entrada = bufio.NewScanner(os.Stdin)
-	entrada.Split(bufio.ScanWords)
-	saida = bufio.NewWriter(os.Stdout)
+	leitor = bufio.NewScanner(os.Stdin)
+	leitor.Split(bufio.ScanWords)
+	escritor = bufio.NewWriter(os.Stdout)
 
 	lerInicio()
-	fmt.Fprintln(os.Stderr, "mapa:", largura, "x", altura, "| turnos:", turnos, "| hospitais:", hospitais)
+	fmt.Fprintln(os.Stderr, "mapa:", largura, "x", altura, "| turnos:", totalTurnos, "| hospitais:", hospitais)
 
-	saida.WriteString("PRONTO\n")
-	saida.Flush()
+	escritor.WriteString("PRONTO\n")
+	escritor.Flush()
 
 	for lerTurno() {
-		saida.WriteString("FIM\n") // nenhuma ambulância se mexe ainda
-		saida.Flush()
+		escritor.WriteString("FIM\n") // nenhuma ambulância se mexe ainda
+		escritor.Flush()
 	}
 }
