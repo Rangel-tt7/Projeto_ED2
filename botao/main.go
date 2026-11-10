@@ -58,6 +58,69 @@ func (grade *Grade) balde(x, y int) int {
 	return linha*grade.Colunas + coluna
 }
 
+func pontosPorTurno(ambulancia *Ambulancia, chamado *Chamado) float64 { // calcula a nota do chamado para a ambulância, ou 0 se não puder atender
+	if !chamado.Aberto {
+		return 0 // já foi recolhido ou venceu
+	}
+	if chamado.Reserva != -1 && chamado.Reserva != ambulancia.ID {
+		return 0 // outra ambulância já vai buscar
+	}
+
+	distAteChamado := manhattan(ambulancia.X, ambulancia.Y, chamado.X, chamado.Y) // a sua conta, guardada numa variável
+
+	if turnoAtual+distAteChamado-1 > chamado.Prazo {
+		return 0 // não chega antes do prazo
+	}
+	if turnoAtual+distAteChamado+chamado.DistanciaHospital-1 > totalTurnos {
+		return 0 // não entrega antes do fim da partida
+	}
+
+	return float64(chamado.Valor) / float64(distAteChamado+chamado.DistanciaHospital)
+}
+
+func buscarChamado(ambulancia *Ambulancia) int { //devolve a posição do melhor chamado para a ambulância -1 se não achar nenhum
+	melhor := -1        // posição do melhor chamado achado
+	melhorPontos := 0.0 // pontos por turno dele
+
+	for _, grade := range []*Grade{chamadosComuns, chamadosUrgentes} { // olha as duas grades
+		colunaAmb := ambulancia.X / grade.Lado // em que balde a ambulância está
+		linhaAmb := ambulancia.Y / grade.Lado
+
+		for anel := 0; anel < grade.Colunas || anel < grade.Linhas; anel++ {
+			if anel > 0 {
+				distMin := (anel-1)*grade.Lado + 1 // o mais perto que um chamado deste anel pode estar
+				if float64(grade.ValorMax)/float64(distMin) <= melhorPontos {
+					break // nada daqui para frente ganha do melhor achado
+				}
+				if distMin > totalTurnos-turnoAtual {
+					break // longe demais para dar tempo antes do fim
+				}
+			}
+
+			for linha := linhaAmb - anel; linha <= linhaAmb+anel; linha++ {
+				for coluna := colunaAmb - anel; coluna <= colunaAmb+anel; coluna++ {
+					if linha < 0 || linha >= grade.Linhas || coluna < 0 || coluna >= grade.Colunas {
+						continue // fora do mapa
+					}
+					if linha != linhaAmb-anel && linha != linhaAmb+anel &&
+						coluna != colunaAmb-anel && coluna != colunaAmb+anel {
+						continue // está dentro do anel: já foi visto antes
+					}
+
+					for _, posicao := range grade.Baldes[linha*grade.Colunas+coluna] {
+						pontos := pontosPorTurno(ambulancia, &chamados[posicao]) // a nota deste chamado para esta ambulância
+						if pontos > melhorPontos {
+							melhorPontos = pontos
+							melhor = posicao
+						}
+					}
+				}
+			}
+		}
+	}
+	return melhor
+}
+
 // lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
 func lerPalavra() []byte {
 	if !leitor.Scan() { //Avança para o próximo pedaço de texto
@@ -233,9 +296,22 @@ func fechar(id int) {
 }
 
 func jogar() {
-	for _, ambulancia := range ambulancias { //percorre o slice, entrega posição e item
-		movimento := "P"       // ambulância não se mexe
-		if !ambulancia.Livre { //ambulância ocupada procura hospital mais próximo
+	for i := range ambulancias {
+		ambulancia := &ambulancias[i]
+		movimento := "P" // ambulância não se mexe
+		if ambulancia.Alvo != -1 {
+			chamados[ambulancia.Alvo].Reserva = -1 // larga a reserva do turno anterior
+			ambulancia.Alvo = -1
+		}
+		if ambulancia.Livre { //ambulância livre procura chamado
+			posicao := buscarChamado(ambulancia)
+			if posicao != -1 {
+				chamado := &chamados[posicao]
+				chamado.Reserva = ambulancia.ID //reserva o chamado para a ambulância
+				ambulancia.Alvo = posicao       // guarda o alvo para poder largar no próximo turno
+				movimento = direcao(ambulancia.X, ambulancia.Y, chamado.X, chamado.Y)
+			}
+		} else {
 			hospitalX, hospitalY := hospitalMaisProximo(ambulancia.X, ambulancia.Y)
 			movimento = direcao(ambulancia.X, ambulancia.Y, hospitalX, hospitalY)
 		}
