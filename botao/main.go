@@ -21,6 +21,11 @@ type Ambulancia struct {
 	Livre          bool
 }
 
+type Grade struct {
+	Lado, Colunas, Linhas, ValorMax int
+	Baldes                          [][]int
+}
+
 var leitor *bufio.Scanner  //Variável global, aponta para o scanner de entrada
 var escritor *bufio.Writer //Escritor da saída, envia no Flush
 
@@ -31,6 +36,27 @@ var chamados []Chamado       //todos os chamados, na ordem em que chegaram
 var ambulancias []Ambulancia //todas as ambulâncias, aplica a regra do 0 até k-1
 var porID *TabelaHash        //para achar o índice de um chamado pelo ID
 var expira [][]int           //uma lista de páginas, cada uma com os IDs dos chamados que expiram naquele turno
+var chamadosComuns *Grade    //grade para os chamados comuns, menos que valem até 20
+var chamadosUrgentes *Grade  //grade para os chamados urgentes, mais de 20
+
+func criarBalde(lado, valorMax int) *Grade {
+	colunas := (largura + lado - 1) / lado
+	linhas := (altura + lado - 1) / lado
+	baldes := make([][]int, colunas*linhas)
+	return &Grade{
+		Lado:     lado,
+		Colunas:  colunas,
+		Linhas:   linhas,
+		ValorMax: valorMax,
+		Baldes:   baldes,
+	}
+}
+
+func (grade *Grade) balde(x, y int) int {
+	coluna := x / grade.Lado
+	linha := y / grade.Lado
+	return linha*grade.Colunas + coluna
+}
 
 // lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
 func lerPalavra() []byte {
@@ -87,6 +113,8 @@ func lerInicio() {
 	porID = CriarTabela(proximoPrimo(largura * altura / 2)) //tamanho inicial da tabela hash
 	chamados = make([]Chamado, 0, largura*altura/4)         //capacidade inicial do slice, make([]Tipo, tamanho, capacidade)
 	expira = make([][]int, totalTurnos+2000)                //uma página para cada turno
+	chamadosComuns = criarBalde(16, 20)                     //balde para os chamados comuns, menos que valem até 20
+	chamadosUrgentes = criarBalde(32, 100)                  //balde para os chamados urgentes, mais de 20
 }
 
 // lerTurno lê a mensagem de um turno. Devolve false quando a partida acaba
@@ -116,6 +144,12 @@ func lerTurno() bool {
 		chamados = append(chamados, Chamado{id, x, y, valor, prazo, distHospital, -1, true}) //adiciona o chamado ao slice
 		porID.Inserir(id, posicao)                                                           // guarda na hash
 		expira[prazo] = append(expira[prazo], id)                                            // anota o id na página do prazo
+		grade := chamadosComuns
+		if valor > 20 {
+			grade = chamadosUrgentes
+		}
+		indiceBalde := grade.balde(x, y)
+		grade.Baldes[indiceBalde] = append(grade.Baldes[indiceBalde], posicao)
 	}
 
 	lerPalavra() // RECOLHIDOS
