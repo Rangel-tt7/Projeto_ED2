@@ -1,8 +1,5 @@
 package main
 
-// Tabela é uma tabela de dispersão (hash) com endereçamento aberto e
-// sondagem linear, como na Aula 10 e na Atividade Avaliativa 3.
-// Guarda pares chave -> valor: a chave é o id do chamado.
 type Tabela struct {
 	chaves  []int
 	valores []int
@@ -10,7 +7,7 @@ type Tabela struct {
 	n       int // quantos pares estão guardados
 }
 
-// NovaTabela cria uma tabela vazia com m posições (use um primo)
+// NovaTabela cria uma tabela vazia com m posições
 func NovaTabela(m int) *Tabela {
 	return &Tabela{
 		chaves:  make([]int, m),
@@ -24,7 +21,6 @@ func (t *Tabela) m() int {
 	return len(t.chaves)
 }
 
-// hash devolve a posição de origem da chave: método da divisão, k mod m
 func (t *Tabela) hash(k int) int {
 	return k % t.m()
 }
@@ -41,7 +37,7 @@ func (t *Tabela) Busca(k int) (int, bool) {
 	return 0, false
 }
 
-// Insere guarda o par (k, v). Se a chave já existe, só troca o valor
+// Insere guarda o par. Se a chave já existe, só troca o valor
 func (t *Tabela) Insere(k, v int) {
 	p := t.hash(k)
 	for t.ocupada[p] {
