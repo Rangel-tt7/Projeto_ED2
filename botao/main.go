@@ -16,6 +16,7 @@ var saida *bufio.Writer    //Escritor da saída, envia no Flush
 
 var largura, altura, turnos int
 var hospitais []Hospital
+var turno int // turno atual
 
 // palavra lê o próximo campo da entrada. Devolve nil quando a entrada acaba
 func palavra() []byte {
@@ -67,6 +68,44 @@ func lerInicio() {
 	palavra() // FIM
 }
 
+// lerTurno lê a mensagem de um turno. Devolve false quando a partida acaba
+func lerTurno() bool {
+	if palavra() == nil { // TURNO, ou nil se o servidor fechou a entrada
+		return false
+	}
+	turno = inteiro()
+
+	palavra() // CHAMADOS
+	n := inteiro()
+	for i := 0; i < n*5; i++ {
+		inteiro() // id x y valor prazo (guardados no passo 2)
+	}
+
+	palavra() // RECOLHIDOS
+	r := inteiro()
+	for i := 0; i < r; i++ {
+		inteiro() // id
+	}
+
+	palavra() // AMBULANCIAS
+	k := inteiro()
+	for i := 0; i < k; i++ {
+		inteiro() // id
+		inteiro() // x
+		inteiro() // y
+		palavra() // LIVRE ou OCUPADA
+	}
+
+	palavra() // PLACAR
+	e := inteiro()
+	for i := 0; i < e*2; i++ {
+		inteiro() // equipe e pontos
+	}
+
+	palavra() // FIM
+	return true
+}
+
 func main() {
 	entrada = bufio.NewScanner(os.Stdin)
 	entrada.Split(bufio.ScanWords)
@@ -77,4 +116,9 @@ func main() {
 
 	saida.WriteString("PRONTO\n")
 	saida.Flush()
+
+	for lerTurno() {
+		saida.WriteString("FIM\n") // nenhuma ambulância se mexe ainda
+		saida.Flush()
+	}
 }
