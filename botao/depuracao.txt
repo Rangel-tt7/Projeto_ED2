@@ -1,0 +1,5 @@
+turno 100 abertos 187
+turno 200 abertos 372
+turno 300 abertos 553
+turno 400 abertos 739
+turno 500 abertos 925

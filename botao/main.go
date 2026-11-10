@@ -11,12 +11,19 @@ type Hospital struct {
 	X, Y int
 }
 
+type Chamado struct {
+	ID, X, Y, Valor, Prazo int
+	Aberto                 bool
+}
+
 var leitor *bufio.Scanner  //Variável global, aponta para o scanner de entrada
 var escritor *bufio.Writer //Escritor da saída, envia no Flush
 
 var largura, altura, totalTurnos int
 var hospitais []Hospital
 var turnoAtual int
+var chamados []Chamado //todos os chamados, na ordem em que chegaram
+var porID *TabelaHash  //para achar o índice de um chamado pelo ID
 
 // lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
 func lerPalavra() []byte {
@@ -65,7 +72,10 @@ func lerInicio() {
 		lerNumero() // x1 y1 x2 y2 (só na etapa 2)
 	}
 
-	lerPalavra() // FIM
+	lerPalavra()                                            // FIM
+	porID = CriarTabela(proximoPrimo(largura * altura / 2)) //tamanho inicial da tabela hash
+	chamados = make([]Chamado, 0, largura*altura/4)         //capacidade inicial do slice, make([]Tipo, tamanho, capacidade)
+
 }
 
 // lerTurno lê a mensagem de um turno. Devolve false quando a partida acaba
@@ -77,14 +87,23 @@ func lerTurno() bool {
 
 	lerPalavra() // CHAMADOS
 	qtdChamados := lerNumero()
-	for i := 0; i < qtdChamados*5; i++ {
-		lerNumero() // id x y valor prazo (guardados no passo 2)
+
+	for i := 0; i < qtdChamados; i++ {
+		id := lerNumero() // id do chamado
+		x := lerNumero()
+		y := lerNumero()
+		valor := lerNumero()
+		prazo := lerNumero()
+		posicao := len(chamados)                                           //posição do chamado no slice
+		chamados = append(chamados, Chamado{id, x, y, valor, prazo, true}) //adiciona o chamado ao slice
+		porID.Inserir(id, posicao)                                         //insere o id e a posição do chamado no slice
 	}
 
 	lerPalavra() // RECOLHIDOS
 	qtdRecolhidos := lerNumero()
 	for i := 0; i < qtdRecolhidos; i++ {
-		lerNumero() // id
+		id := lerNumero() // id
+		fechar(id)        //fecha o chamado
 	}
 
 	lerPalavra() // AMBULANCIAS
@@ -106,10 +125,20 @@ func lerTurno() bool {
 	return true
 }
 
+func fechar(id int) {
+	busca, achou := porID.Buscar(id) //retorna o índice do chamado no slice e se achou
+	if !achou {
+		return // o chamado não está na lista
+	}
+	chamados[busca].Aberto = false //muda o chamado para fechado
+	porID.Remover(id)
+}
+
 func main() {
 	leitor = bufio.NewScanner(os.Stdin)
 	leitor.Split(bufio.ScanWords)
 	escritor = bufio.NewWriter(os.Stdout)
+	depuracao, _ := os.Create("depuracao.txt")
 
 	lerInicio()
 	fmt.Fprintln(os.Stderr, "mapa:", largura, "x", altura, "| turnos:", totalTurnos, "| hospitais:", hospitais)
@@ -120,5 +149,8 @@ func main() {
 	for lerTurno() {
 		escritor.WriteString("FIM\n") // nenhuma ambulância se mexe ainda
 		escritor.Flush()
+		if turnoAtual%100 == 0 {
+			fmt.Fprintln(depuracao, "turno", turnoAtual, "abertos", porID.quantidade)
+		}
 	}
 }
