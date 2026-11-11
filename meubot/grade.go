@@ -50,7 +50,7 @@ func buscarChamado(ambulancia *Ambulancia) int { //devolve a posição do melhor
 					}
 					if linha != linhaAmb-anel && linha != linhaAmb+anel &&
 						coluna != colunaAmb-anel && coluna != colunaAmb+anel {
-						continue // está dentro do anel: já foi visto antes
+						continue // está dentro do anel, já foi visto antes
 					}
 
 					for _, posicao := range grade.Baldes[linha*grade.Colunas+coluna] {

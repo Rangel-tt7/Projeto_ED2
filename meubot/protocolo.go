@@ -1,6 +1,6 @@
 package main
 
-// lerPalavra lê a próxima palavra da entrada. Devolve nil quando a entrada acaba
+// lê a próxima palavra da entrada.
 func lerPalavra() []byte {
 	if !leitor.Scan() { //Avança para o próximo pedaço de texto
 		return nil
@@ -8,23 +8,23 @@ func lerPalavra() []byte {
 	return leitor.Bytes() //Retorna o pedaço de texto lido
 }
 
-// lerNumero lê a próxima palavra e converte para número
+//  lê a próxima palavra e converte para número
 func lerNumero() int {
 	numero := 0
 	for _, letra := range lerPalavra() { //percorre o slice e entrega a posição e o item, descarta a posição
-		numero = numero*10 + int(letra-'0') // letra-'0' converte o caractere no dígito (ex.: '7'-'0' = 7); numero*10 desloca os dígitos já lidos uma casa para a esquerda
+		numero = numero*10 + int(letra-'0') // letra-'0' converte o caractere no dígito
 	}
 	return numero
 }
 
 // lerInicio lê a mensagem de início e guarda o mapa, os turnos e os hospitais
 func lerInicio() {
-	lerPalavra() // INICIO
+	lerPalavra()
 	largura = lerNumero()
 	altura = lerNumero()
 	totalTurnos = lerNumero()
 	for i := 0; i < 4; i++ {
-		lerNumero() // limites, equipe e número de equipes (não usados)
+		lerNumero()
 	}
 
 	lerPalavra() // HOSPITAIS
@@ -59,9 +59,9 @@ func lerInicio() {
 	chamadosUrgentes = criarBalde(32, 100)                  //balde para os chamados urgentes, mais de 20
 }
 
-// lerTurno lê a mensagem de um turno. Devolve false quando a partida acaba
+//  lê a mensagem de um turno
 func lerTurno() bool {
-	if lerPalavra() == nil { // TURNO, ou nil se o servidor fechou a entrada
+	if lerPalavra() == nil { // turno ou nil se o servidor fechou a entrada
 		return false
 	}
 	turnoAtual = lerNumero()

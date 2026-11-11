@@ -1,6 +1,5 @@
 package main
 
-// Hospital guarda a posição de um hospital
 type Hospital struct {
 	X, Y int
 }
