@@ -2,8 +2,8 @@ package main //todo o arquivo gera um programa
 
 import (
 	"bufio" //Leitura rápida
-	"fmt"   //Printf
-	"os"    //Entrada e saída
+	"fmt"
+	"os" //Entrada e saída
 )
 
 var leitor *bufio.Scanner  //Variável global, aponta para o scanner de entrada
@@ -23,7 +23,6 @@ func main() {
 	leitor = bufio.NewScanner(os.Stdin)
 	leitor.Split(bufio.ScanWords)
 	escritor = bufio.NewWriter(os.Stdout)
-	depuracao, _ := os.Create("depuracao.txt")
 
 	lerInicio()
 	fmt.Fprintln(os.Stderr, "mapa:", largura, "x", altura, "| turnos:", totalTurnos, "| hospitais:", hospitais)
@@ -33,8 +32,5 @@ func main() {
 
 	for lerTurno() {
 		jogar()
-		if turnoAtual%100 == 0 {
-			fmt.Fprintln(depuracao, "turno", turnoAtual, "abertos", porID.quantidade)
-		}
 	}
 }
