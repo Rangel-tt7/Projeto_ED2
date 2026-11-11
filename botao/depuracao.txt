@@ -1,6 +1,0 @@
-turno 100 abertos 99317
-turno 200 abertos 191418
-turno 300 abertos 271522
-turno 400 abertos 338449
-turno 500 abertos 396828
-turno 600 abertos 445911
